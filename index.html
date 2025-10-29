@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>배드민턴 대진표 생성기</title>
+  <style>
+    body{font-family:'Noto Sans KR',sans-serif;margin:0;background:#f7fafc;padding:20px;}
+    .container{max-width:1100px;margin:0 auto;background:white;padding:20px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.05);}
+    h1{margin-top:0;text-align:center;}
+    input,select,button{padding:8px;margin:4px;border-radius:8px;border:1px solid #ccc;}
+    button{background:#2563eb;color:white;border:none;cursor:pointer;}
+    button:hover{background:#1d4ed8;}
+    .players{margin-top:10px;border:1px dashed #ccc;padding:10px;min-height:40px;border-radius:8px;}
+    .match{padding:8px;margin:8px 0;background:#e0f2fe;border-radius:8px;}
+    .leftovers{background:#fff3cd;border:1px solid #ffeeba;padding:10px;border-radius:8px;margin-top:10px;}
+    .court{font-weight:bold;}
+    .small{font-size:13px;color:#475569;margin-bottom:8px;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🏸 배드민턴 대진표 생성기</h1>
+  <p class="small">선수를 등록한 후 전체 또는 조별로 무작위 2:2 대진표를 생성합니다. (최대 40명)</p>
+  <div>
+    <input id="name" placeholder="이름 입력" />
+    <select id="age">
+      <option>20대</option><option>30대</option><option>40대</option><option>50대</option><option>60대</option>
+    </select>
+    <select id="gender">
+      <option>남자</option><option>여자</option>
+    </select>
+    <select id="group">
+      <option>A조</option><option>B조</option><option>C조</option><option>D조</option><option>E조</option>
+    </select>
+    <button onclick="addPlayer()">추가</button>
+  </div>
+
+  <div class="players" id="playerList">등록된 선수가 없습니다.</div>
+
+  <div style="margin-top:12px;">
+    <button onclick="makeDraw(false)">전체 랜덤 대진표 생성</button>
+    <button onclick="makeDraw(true)">조별 랜덤 대진표 생성</button>
+    <button onclick="resetCourts()">코트 초기화</button>
+  </div>
+
+  <div id="draw"></div>
+</div>
+
+<script>
+let players = [];
+let courtStatus = Array(8).fill(false); // 1~8코트 상태
+
+function addPlayer() {
+  const name = document.getElementById('name').value.trim();
+  const age = document.getElementById('age').value;
+  const gender = document.getElementById('gender').value;
+  const group = document.getElementById('group').value;
+  if (!name) return alert('이름을 입력하세요!');
+  if (players.length >= 40) return alert('최대 40명까지만 등록할 수 있습니다.');
+  players.push({ name, age, gender, group });
+  document.getElementById('name').value = '';
+  renderPlayers();
+}
+
+function renderPlayers() {
+  const list = document.getElementById('playerList');
+  if (players.length === 0) {
+    list.innerHTML = '등록된 선수가 없습니다.';
+    return;
+  }
+  list.innerHTML = players.map((p,i)=>`${i+1}. ${p.name} (${p.age}, ${p.gender}, ${p.group})`).join('<br>');
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function makeDraw(byGroup) {
+  if (players.length < 4) return alert('최소 4명 이상 등록해야 합니다.');
+  let filtered = players;
+  if (byGroup) {
+    const group = prompt('대진표를 생성할 조(A~E)를 입력하세요.').toUpperCase();
+    filtered = players.filter(p => p.group === group);
+    if (filtered.length < 4) return alert(`${group}조 인원이 4명 이상이어야 합니다.`);
+  }
+  filtered = shuffle([...filtered]);
+
+  const matches = [];
+  while (filtered.length >= 4 && matches.length < 8) {
+    const team = filtered.splice(0,4);
+    matches.push(team);
+  }
+
+  const leftovers = filtered.map(p => p.name);
+  const output = document.getElementById('draw');
+  let html = '';
+  matches.forEach((m,i)=>{
+    const courtNum = i+1;
+    if (courtStatus[i]) {
+      html += `<div class='match'><span class='court'>${courtNum}코트</span>: <b>대기 중 (코트 사용 중)</b></div>`;
+    } else {
+      html += `<div class='match'><span class='court'>${courtNum}코트</span>: 
+      ${m[0].name}, ${m[1].name} vs ${m[2].name}, ${m[3].name}</div>`;
+      courtStatus[i] = true;
+    }
+  });
+  if (leftovers.length) html += `<div class='leftovers'>남은 인원: ${leftovers.join(', ')}</div>`;
+  output.innerHTML = html;
+}
+
+function resetCourts() {
+  courtStatus = Array(8).fill(false);
+  document.getElementById('draw').innerHTML = '';
+  alert('모든 코트가 초기화되었습니다.');
+}
+</script>
+</body>
+</html>
